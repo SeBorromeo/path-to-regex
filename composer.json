@@ -1,0 +1,14 @@
+{
+  "name": "sebastian/path-to-regex",
+  "description": "A PHP port of the js library path-to-regexp.",
+  "type": "library",
+  "license": "MIT",
+  "require": {
+    "php": "^8.2"
+  },
+  "autoload": {
+    "psr-4": {
+      "Sebastian\\PathRegex\\": "src/"
+    }
+  }
+}
