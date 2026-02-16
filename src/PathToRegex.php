@@ -134,7 +134,7 @@ class PathToRegex {
         if (preg_match(ID_START, $chars[$index])) {
             do {
                 $value .= $chars[$index++];
-            } while (preg_match(ID_CONTINUE, $chars[$index]));
+            } while (isset($chars[$index]) && preg_match(ID_CONTINUE, $chars[$index]));
         } else if ($chars[$index] === '"') {
             $quoteStart = $index;
             while ($index++ < count($chars)) {
