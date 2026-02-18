@@ -1,12 +1,12 @@
 <?php
 
 use PHPUnit\Framework\TestCase;
-use Sebastian\PathToRegex\PathToRegex;
-use Sebastian\PathToRegex\AST\Text;
-use Sebastian\PathToRegex\AST\Group;
-use Sebastian\PathToRegex\AST\Parameter;
-use Sebastian\PathToRegex\AST\Wildcard;
-use Sebastian\PathToRegex\Regex;
+use SeBorromeo\PathToRegex\PathToRegex;
+use SeBorromeo\PathToRegex\AST\Text;
+use SeBorromeo\PathToRegex\AST\Group;
+use SeBorromeo\PathToRegex\AST\Parameter;
+use SeBorromeo\PathToRegex\AST\Wildcard;
+use SeBorromeo\PathToRegex\Regex;
 
 class PathToRegexTest extends TestCase {
     public function testEscapeText(): void {

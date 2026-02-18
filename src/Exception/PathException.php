@@ -1,4 +1,4 @@
-<?php namespace Sebastian\PathToRegex\Exception;
+<?php namespace SeBorromeo\PathToRegex\Exception;
 
 class PathException extends \InvalidArgumentException {
     public function __construct(

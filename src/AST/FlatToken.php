@@ -1,3 +1,3 @@
-<?php namespace Sebastian\PathToRegex\AST;
+<?php namespace SeBorromeo\PathToRegex\AST;
 
 abstract class FlatToken extends Token {}

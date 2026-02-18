@@ -1,4 +1,4 @@
-<?php namespace Sebastian\PathToRegex;
+<?php namespace SeBorromeo\PathToRegex;
 
 class Regex {
     public const DEFAULT_DELIMITER = '#';

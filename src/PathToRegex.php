@@ -1,15 +1,15 @@
-<?php namespace Sebastian\PathToRegex;
+<?php namespace SeBorromeo\PathToRegex;
 
-use Sebastian\PathToRegex\Exception\PathException;
-use Sebastian\PathToRegex\AST\Group;
-use Sebastian\PathToRegex\AST\Key;
-use Sebastian\PathToRegex\AST\Parameter;
-use Sebastian\PathToRegex\AST\Text;
-use Sebastian\PathToRegex\AST\Token;
-use Sebastian\PathToRegex\AST\Wildcard;
-use Sebastian\PathToRegex\AST\TokenData;
-use Sebastian\PathToRegex\Lexer\LexToken;
-use Sebastian\PathToRegex\Lexer\TokenType;
+use SeBorromeo\PathToRegex\Exception\PathException;
+use SeBorromeo\PathToRegex\AST\Group;
+use SeBorromeo\PathToRegex\AST\Key;
+use SeBorromeo\PathToRegex\AST\Parameter;
+use SeBorromeo\PathToRegex\AST\Text;
+use SeBorromeo\PathToRegex\AST\Token;
+use SeBorromeo\PathToRegex\AST\Wildcard;
+use SeBorromeo\PathToRegex\AST\TokenData;
+use SeBorromeo\PathToRegex\Lexer\LexToken;
+use SeBorromeo\PathToRegex\Lexer\TokenType;
 
 const DEFAULT_DELIMITER = '/';
 function noop($v) { return $v; }

@@ -1,4 +1,4 @@
-<?php namespace Sebastian\PathToRegex\Lexer;
+<?php namespace SeBorromeo\PathToRegex\Lexer;
 
 /**
  * @internal
