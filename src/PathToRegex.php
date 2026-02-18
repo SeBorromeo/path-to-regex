@@ -110,7 +110,7 @@ class PathToRegex {
             } else if ($token->type === TokenType::LBrace) {
                 $output[] = new Group(self::consumeUntil(TokenType::RBrace, $tokens, $encodePath, $pos));
             } else {
-                throw new PathException("Unexpected token type {$token->type} at index {$token->index}, expected $endType");
+                throw new PathException("Unexpected token type {$token->type->value} at index {$token->index}, expected $endType->value");
             }
         }
 
