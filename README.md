@@ -55,6 +55,38 @@ $fn("/users/123/delete");
 // [ 'path' => '/users/123/delete', 'params' => ['id' => '123']]
 ```
 
+## Match
+
+The `match` function returns a function for matching strings against a path:
+
+- **path** String, `TokenData` object, or array of strings and `TokenData` objects.
+- **options** _(optional)_ (Extends [pathToRegex](#pathToRegex) options)
+  - **decode** Function for decoding strings to params, or `false` to disable all processing. (default: `decodeURIComponent`)
+
+```php
+$fn = PathToRegex::match('/:foo/:bar');
+```
+
+**Please note:** `path-to-regex` is intended for ordered data (e.g. paths, hosts). It can not handle arbitrarily ordered data (e.g. query strings, URL fragments, JSON, etc).
+
+## PathToRegex
+
+The `pathToRegex` function returns the `Regex` for matching strings against paths, and an array of `keys` for understanding the `Regex` matches.
+
+- **path** String, `TokenData` object, or array of strings and `TokenData` objects.
+- **options** _(optional)_ (See [parse](#parse) for more options)
+  - **sensitive** Regexp will be case sensitive. (default: `false`)
+  - **end** Validate the match reaches the end of the string. (default: `true`)
+  - **delimiter** The default delimiter for segments, e.g. `[^/]` for `:named` parameters. (default: `'/'`)
+  - **trailing** Allows optional trailing delimiter to match. (default: `true`)
+
+```php
+['regex' => $regex, 'keys' => $keys] = PathToRegex::pathToRegex('/:foo/:bar');
+
+preg_match($regex, '/foo/123', $matches);
+// $matches = ['/foo/123', '123']
+```
+
 [path-to-regexp-url]: https://github.com/pillarjs/path-to-regexp
 
 
