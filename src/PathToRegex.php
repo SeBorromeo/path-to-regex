@@ -130,14 +130,13 @@ class PathToRegex {
      */
     private static function parseParamName(array $chars, int &$index): string {
         $value = '';
-        $val = preg_match(ID_START, $chars[$index]);
-        if (preg_match(ID_START, $chars[$index])) {
+        if (isset($chars[$index]) && preg_match(ID_START, $chars[$index])) {
             do {
                 $value .= $chars[$index++];
             } while (isset($chars[$index]) && preg_match(ID_CONTINUE, $chars[$index]));
-        } else if ($chars[$index] === '"') {
+        } else if (isset($chars[$index]) && $chars[$index] === '"') {
             $quoteStart = $index;
-            while ($index++ < count($chars)) {
+            while (++$index < count($chars)) {
                 if ($chars[$index] === '"') {
                     $index++;
                     $quoteStart = 0;

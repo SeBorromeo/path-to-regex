@@ -6,6 +6,7 @@ use SeBorromeo\PathToRegex\AST\Text;
 use SeBorromeo\PathToRegex\AST\Group;
 use SeBorromeo\PathToRegex\AST\Parameter;
 use SeBorromeo\PathToRegex\AST\Wildcard;
+use SeBorromeo\PathToRegex\Exception\PathException;
 use SeBorromeo\PathToRegex\Regex;
 
 class PathToRegexTest extends TestCase {
@@ -23,6 +24,12 @@ class PathToRegexTest extends TestCase {
 
     /* ---------- Parse ---------- */
 
+    public function testParseEmpty(): void {
+        $result = PathToRegex::parse('');
+
+        $this->assertCount(0, $result->tokens);
+    }
+
     public function testParseText(): void {
         $result = PathToRegex::parse('/users/list');
 
@@ -32,6 +39,17 @@ class PathToRegexTest extends TestCase {
         $text = $result->tokens[0];
         $this->assertInstanceOf(Text::class, $text);
         $this->assertSame('/users/list', $text->value);
+    }
+
+    public function testParseEscapedText(): void {
+        $result = PathToRegex::parse('/users/\\:id');
+
+        $this->assertCount(1, $result->tokens);
+
+        /** @var Text */
+        $text = $result->tokens[0];
+        $this->assertInstanceOf(Text::class, $text);
+        $this->assertSame('/users/:id', $text->value);
     }
 
     public function testParseParameter(): void {
@@ -90,6 +108,44 @@ class PathToRegexTest extends TestCase {
         $this->assertSame('month', $monthParam->name);
     }
 
+    public function testNoParamName(): void {
+        $this->expectException(PathException::class);
+        PathToRegex::parse('/files/*');
+    }
+
+    public function testUnterminatedGroup(): void {
+        $this->expectException(PathException::class);
+        PathToRegex::parse('/posts{/:year');
+    }
+
+    public function testUnmatchedClosingGroup(): void {
+        $this->expectException(PathException::class);
+        PathToRegex::parse('/posts/:year}');
+    }
+
+    public function testInvalidParamName(): void {
+        $this->expectException(PathException::class);
+        PathToRegex::parse('/users/:123');
+    }
+
+    public function testQuoteParamName(): void {
+        $result = PathToRegex::parse('/users/:"\{id\}"');
+
+        /** @var Token[] */
+        $tokens = $result->tokens;
+
+        $this->assertCount(2, $tokens);
+        $this->assertInstanceOf(Text::class, $tokens[0]);
+        $this->assertSame('/users/', $tokens[0]->value);
+        $this->assertInstanceOf(Parameter::class, $tokens[1]);
+        $this->assertSame('{id}', $tokens[1]->name);
+    }
+
+    public function testUnterminatedQuote(): void {
+        $this->expectException(PathException::class);
+        PathToRegex::parse('/users/:"id');
+    }
+
     /* ---------- Match ---------- */
 
     public function testMatchText(): void {
@@ -142,5 +198,4 @@ class PathToRegexTest extends TestCase {
         $this->assertInstanceOf(Parameter::class, $param);
         $this->assertEquals('id', $param->name);
     }
-
 }   
