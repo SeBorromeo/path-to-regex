@@ -5,6 +5,7 @@ use SeBorromeo\PathToRegex\PathToRegex;
 use SeBorromeo\PathToRegex\AST\Text;
 use SeBorromeo\PathToRegex\AST\Group;
 use SeBorromeo\PathToRegex\AST\Parameter;
+use SeBorromeo\PathToRegex\AST\TokenData;
 use SeBorromeo\PathToRegex\AST\Wildcard;
 use SeBorromeo\PathToRegex\Exception\PathException;
 use SeBorromeo\PathToRegex\Regex;
@@ -197,5 +198,164 @@ class PathToRegexTest extends TestCase {
         $param = $keys[0];
         $this->assertInstanceOf(Parameter::class, $param);
         $this->assertEquals('id', $param->name);
+    }
+
+    /* ---------- Stringify ---------- */
+
+    public function testStringifySimpleText(): void {
+        $tokens = [new Text('/users')];
+        $data = new TokenData($tokens, 'originalpath');
+
+        $this->assertSame('/users', PathToRegex::stringify($data));
+    }
+
+    public function testEscapeSpecialCharacters(): void {
+        $tokens = [new Text('/foo?bar+')];
+        $data = new TokenData($tokens, 'originalpath');
+
+        $this->assertSame('/foo\\?bar\\+', PathToRegex::stringify($data));
+    }
+
+    public function testSimpleParameter(): void {
+        $tokens = [
+            new Text('/users/'),
+            new Parameter('id')
+        ];
+        $data = new TokenData($tokens, 'originalpath');
+
+        $this->assertSame('/users/:id', PathToRegex::stringify($data));
+    }
+
+    public function testParameterWithUnsafeNameGetsQuoted(): void {
+        $tokens = [
+            new Parameter('not-valid-name!')
+        ];
+        $data = new TokenData($tokens, 'originalpath');
+
+        $this->assertSame(':"not-valid-name!"', PathToRegex::stringify($data));
+    }
+
+    public function testParameterFollowedByUnsafeTextRequiresQuoting(): void {
+        $tokens = [
+            new Parameter('id'),
+            new Text('abc')
+        ];
+        $data = new TokenData($tokens, 'originalpath');
+
+        $this->assertSame(':"id"abc', PathToRegex::stringify($data));
+    }
+
+    public function testParameterFollowedBySafeTextDoesNotQuote(): void {
+        $tokens = [
+            new Parameter('id'),
+            new Text('-abc')
+        ];
+        $data = new TokenData($tokens, 'originalpath');
+
+        $this->assertSame(':id-abc', PathToRegex::stringify($data));
+    }
+
+    public function testSimpleWildcard(): void {
+        $tokens = [
+            new Text('/files/'),
+            new Wildcard('path')
+        ];
+        $data = new TokenData($tokens, 'originalpath');
+
+        $this->assertSame('/files/*path', PathToRegex::stringify($data));
+    }
+
+    public function testWildcardUnsafeNameGetsQuoted(): void {
+        $tokens = [
+            new Wildcard('bad-name!')
+        ];
+        $data = new TokenData($tokens, 'originalpath');
+
+        $this->assertSame('*"bad-name!"', PathToRegex::stringify($data));
+    }
+
+    public function testWildcardFollowedByUnsafeTextRequiresQuoting(): void {
+        $tokens = [
+            new Wildcard('path'),
+            new Text('abc')
+        ];
+        $data = new TokenData($tokens, 'originalpath');
+
+        $this->assertSame('*"path"abc', PathToRegex::stringify($data));
+    }
+
+    public function testSimpleGroup(): void {
+        $group = new Group([
+            new Text('/inner')
+        ]);
+
+        $tokens = [$group];
+        $data = new TokenData($tokens, 'originalpath');
+
+        $this->assertSame('{/inner}', PathToRegex::stringify($data));
+    }
+
+    public function testNestedGroup(): void {
+        $group = new Group([
+            new Text('/a'),
+            new Group([
+                new Text('/b')
+            ])
+        ]);
+
+        $data = new TokenData([$group], 'originalpath');
+
+        $this->assertSame('{/a{/b}}', PathToRegex::stringify($data));
+    }
+
+    public function testGroupWithParameter(): void {
+        $group = new Group([
+            new Text('/user/'),
+            new Parameter('id')
+        ]);
+
+        $data = new TokenData([$group], 'originalpath');
+
+        $this->assertSame('{/user/:id}', PathToRegex::stringify($data));
+    }
+
+    public function testMixedTokens(): void {
+        $tokens = [
+            new Text('/users/'),
+            new Parameter('id'),
+            new Text('/files/'),
+            new Wildcard('path')
+        ];
+
+        $data = new TokenData($tokens, 'originalpath');
+
+        $this->assertSame('/users/:id/files/*path', PathToRegex::stringify($data));
+    }
+
+    public function testEmptyTokens(): void {
+        $data = new TokenData([], 'originalpath');
+
+        $this->assertSame('', PathToRegex::stringify($data));
+    }
+
+    public function testParameterNameWithUnicode(): void {
+        $tokens = [
+            new Parameter('ñame')
+        ];
+        $data = new TokenData($tokens, 'originalpath');
+
+        $this->assertSame(':ñame', PathToRegex::stringify($data));
+    }
+
+    public function testUnsupportedTokenThrows(): void {
+        $this->expectException(InvalidArgumentException::class);
+
+        $badToken = new class {
+            public function type() {
+                return 'unknown';
+            }
+        };
+
+        PathToRegex::stringify(new TokenData([$badToken], 'originalpath'));
     }
 }   

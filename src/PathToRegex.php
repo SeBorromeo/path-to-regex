@@ -15,6 +15,7 @@ const DEFAULT_DELIMITER = '/';
 function noop($v) { return $v; }
 const ID_START = '/^[$_\p{L}\p{Nl}]$/u';
 const ID_CONTINUE = '/^[$\p{L}\p{Nl}\p{Mn}\p{Mc}\p{Nd}\p{Pc}\x{200C}\x{200D}]$/u';
+const ID = '/^[$_\p{L}\p{Nl}][$_\p{L}\p{Nl}\p{Mn}\p{Mc}\p{Nd}\p{Pc}\x{200C}\x{200D}]*$/u';
 
 const SIMPLE_TOKENS = [
     "{" => TokenType::LBrace,
@@ -424,18 +425,66 @@ class PathToRegex {
     /* ---------- Stringify ---------- */
 
     /**
-     * Stringify token data into a path string.
+     * Stringify an array of tokens into a path string.
+     * 
+     * @param Token[] $tokens
+     * - An array of tokens to stringify.
+     * 
+     * @param int $index
+     * - The index of the first token to stringify.
+      * 
+      * @return string
+     */
+    private static function stringifyTokens(array $tokens, int $index = 0): string {
+        $value = '';
+
+        while (isset($tokens[$index])) {
+            $token = $tokens[$index++];
+
+            if ($token instanceof Text) {
+                $value .= self::escapeText($token->value);
+            } elseif ($token instanceof Group) {
+                $value .= '{' . self::stringifyTokens($token->tokens, 0) . '}';
+            } elseif ($token instanceof Parameter) {
+                $value .= ':' . self::stringifyName($token->name, $tokens[$index]);
+            } elseif ($token instanceof Wildcard) {
+                $value .= '*' . self::stringifyName($token->name, $tokens[$index]);
+            } else {
+                throw new \InvalidArgumentException("Unsupported token type " . $token->type());
+            }
+        }
+
+        return $value;
+    } 
+
+    /**
+     * Stringify token data into a path string. 
+     * 
+     * @param TokenData $data
+     *  - The token data to stringify, containing the tokens and the original path string.
      */
     public static function stringify(TokenData $data): string {
         return self::stringifyTokens($data->tokens);
     }
 
     /**
-     * Stringify an array of tokens into a path string.
+     * Stringify a parameter name, escaping it if necessary.
+     * 
+     * @param string $name
+     *  - The parameter name to stringify.
+     * 
+     * @param Token|null $next
+     *  - The next token in the sequence, used to determine if the name needs to be escaped to avoid ambiguity when followed by certain text tokens.
+     * 
+     * @return string
      */
-    private static function stringifyTokens(array $tokens): string {
-        return ''; //TODO
-    } 
+    private static function stringifyName(string $name, ?Token $next = null): string {
+        if (!self::isNameSafe($name) || self::isNextNameSafe($next)) {
+            return json_encode($name);
+        }
+
+        return $name;
+    }
 
     /**
      * Escape text for stringify to path.
@@ -444,12 +493,21 @@ class PathToRegex {
         return preg_replace('/[{}()\[\]+?!:*\\\\]/', '\\\\$0', $str);
     }
 
+    /**
+     * Check if a parameter name is safe to stringify without quotes.
+     */
     private static function isNameSafe(string $name): bool {
-        return false; //TODO
+        return preg_match(ID, $name) === 1;
     }
 
+    /**
+     * Check if the next token is a text token that starts with a character that can be used in an unquoted parameter name.
+     */
     private static function isNextNameSafe(?Token $token = null): bool {
-        return false; //TODO
+        return $token !== null
+            && $token instanceof Text
+            && isset($token->value[0])
+            && preg_match(ID_CONTINUE, $token->value[0]) === 1;
     }
 
     /* ---------- Helper ---------- */
@@ -460,7 +518,7 @@ class PathToRegex {
      * @throws \InvalidArgumentException
      *  - If the decoded value is not valid UTF-8.
      */
-    private static function decodeURIComponent(string $val): string {
+    public static function decodeURIComponent(string $val): string {
         $decoded = rawurldecode($val);
         if (!mb_check_encoding($decoded, 'UTF-8')) 
            throw new \InvalidArgumentException("Failed to decode param '$val'");
