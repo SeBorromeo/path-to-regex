@@ -109,27 +109,27 @@ class PathToRegexTest extends TestCase {
         $this->assertSame('month', $monthParam->name);
     }
 
-    public function testNoParamName(): void {
+    public function testParseNoParamName(): void {
         $this->expectException(PathException::class);
         PathToRegex::parse('/files/*');
     }
 
-    public function testUnterminatedGroup(): void {
+    public function testParseUnterminatedGroup(): void {
         $this->expectException(PathException::class);
         PathToRegex::parse('/posts{/:year');
     }
 
-    public function testUnmatchedClosingGroup(): void {
+    public function testParseUnmatchedClosingGroup(): void {
         $this->expectException(PathException::class);
         PathToRegex::parse('/posts/:year}');
     }
 
-    public function testInvalidParamName(): void {
+    public function testParseInvalidParamName(): void {
         $this->expectException(PathException::class);
         PathToRegex::parse('/users/:123');
     }
 
-    public function testQuoteParamName(): void {
+    public function testParseQuoteParamName(): void {
         $result = PathToRegex::parse('/users/:"\{id\}"');
 
         /** @var Token[] */
@@ -142,7 +142,7 @@ class PathToRegexTest extends TestCase {
         $this->assertSame('{id}', $tokens[1]->name);
     }
 
-    public function testUnterminatedQuote(): void {
+    public function testParseUnterminatedQuote(): void {
         $this->expectException(PathException::class);
         PathToRegex::parse('/users/:"id');
     }
@@ -209,14 +209,14 @@ class PathToRegexTest extends TestCase {
         $this->assertSame('/users', PathToRegex::stringify($data));
     }
 
-    public function testEscapeSpecialCharacters(): void {
+    public function testStringifyEscapeSpecialCharacters(): void {
         $tokens = [new Text('/foo?bar+')];
         $data = new TokenData($tokens, 'originalpath');
 
         $this->assertSame('/foo\\?bar\\+', PathToRegex::stringify($data));
     }
 
-    public function testSimpleParameter(): void {
+    public function testStringifySimpleParameter(): void {
         $tokens = [
             new Text('/users/'),
             new Parameter('id')
@@ -226,7 +226,7 @@ class PathToRegexTest extends TestCase {
         $this->assertSame('/users/:id', PathToRegex::stringify($data));
     }
 
-    public function testParameterWithUnsafeNameGetsQuoted(): void {
+    public function testStringifyParameterWithUnsafeNameGetsQuoted(): void {
         $tokens = [
             new Parameter('not-valid-name!')
         ];
@@ -235,7 +235,7 @@ class PathToRegexTest extends TestCase {
         $this->assertSame(':"not-valid-name!"', PathToRegex::stringify($data));
     }
 
-    public function testParameterFollowedByUnsafeTextRequiresQuoting(): void {
+    public function testStringifyParameterFollowedByUnsafeTextRequiresQuoting(): void {
         $tokens = [
             new Parameter('id'),
             new Text('abc')
@@ -245,7 +245,7 @@ class PathToRegexTest extends TestCase {
         $this->assertSame(':"id"abc', PathToRegex::stringify($data));
     }
 
-    public function testParameterFollowedBySafeTextDoesNotQuote(): void {
+    public function testStringifyParameterFollowedBySafeTextDoesNotQuote(): void {
         $tokens = [
             new Parameter('id'),
             new Text('-abc')
@@ -255,7 +255,7 @@ class PathToRegexTest extends TestCase {
         $this->assertSame(':id-abc', PathToRegex::stringify($data));
     }
 
-    public function testSimpleWildcard(): void {
+    public function testStringifySimpleWildcard(): void {
         $tokens = [
             new Text('/files/'),
             new Wildcard('path')
@@ -265,7 +265,7 @@ class PathToRegexTest extends TestCase {
         $this->assertSame('/files/*path', PathToRegex::stringify($data));
     }
 
-    public function testWildcardUnsafeNameGetsQuoted(): void {
+    public function testStringifyWildcardUnsafeNameGetsQuoted(): void {
         $tokens = [
             new Wildcard('bad-name!')
         ];
@@ -274,7 +274,7 @@ class PathToRegexTest extends TestCase {
         $this->assertSame('*"bad-name!"', PathToRegex::stringify($data));
     }
 
-    public function testWildcardFollowedByUnsafeTextRequiresQuoting(): void {
+    public function testStringifyWildcardFollowedByUnsafeTextRequiresQuoting(): void {
         $tokens = [
             new Wildcard('path'),
             new Text('abc')
@@ -284,7 +284,7 @@ class PathToRegexTest extends TestCase {
         $this->assertSame('*"path"abc', PathToRegex::stringify($data));
     }
 
-    public function testSimpleGroup(): void {
+    public function testStringifySimpleGroup(): void {
         $group = new Group([
             new Text('/inner')
         ]);
@@ -295,7 +295,7 @@ class PathToRegexTest extends TestCase {
         $this->assertSame('{/inner}', PathToRegex::stringify($data));
     }
 
-    public function testNestedGroup(): void {
+    public function testStringifyNestedGroup(): void {
         $group = new Group([
             new Text('/a'),
             new Group([
@@ -308,7 +308,7 @@ class PathToRegexTest extends TestCase {
         $this->assertSame('{/a{/b}}', PathToRegex::stringify($data));
     }
 
-    public function testGroupWithParameter(): void {
+    public function testStringifyGroupWithParameter(): void {
         $group = new Group([
             new Text('/user/'),
             new Parameter('id')
@@ -319,7 +319,7 @@ class PathToRegexTest extends TestCase {
         $this->assertSame('{/user/:id}', PathToRegex::stringify($data));
     }
 
-    public function testMixedTokens(): void {
+    public function testStringifyMixedTokens(): void {
         $tokens = [
             new Text('/users/'),
             new Parameter('id'),
@@ -332,13 +332,13 @@ class PathToRegexTest extends TestCase {
         $this->assertSame('/users/:id/files/*path', PathToRegex::stringify($data));
     }
 
-    public function testEmptyTokens(): void {
+    public function testStringifyEmptyTokens(): void {
         $data = new TokenData([], 'originalpath');
 
         $this->assertSame('', PathToRegex::stringify($data));
     }
 
-    public function testParameterNameWithUnicode(): void {
+    public function testStringifyParameterNameWithUnicode(): void {
         $tokens = [
             new Parameter('ñame')
         ];
@@ -347,7 +347,7 @@ class PathToRegexTest extends TestCase {
         $this->assertSame(':ñame', PathToRegex::stringify($data));
     }
 
-    public function testUnsupportedTokenThrows(): void {
+    public function testStringifyUnsupportedTokenThrows(): void {
         $this->expectException(InvalidArgumentException::class);
 
         $badToken = new class {
