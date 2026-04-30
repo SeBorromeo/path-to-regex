@@ -7,6 +7,7 @@ use SeBorromeo\PathToRegex\AST\Group;
 use SeBorromeo\PathToRegex\AST\Parameter;
 use SeBorromeo\PathToRegex\AST\TokenData;
 use SeBorromeo\PathToRegex\AST\Wildcard;
+use SeBorromeo\PathToRegex\AST\Token;
 use SeBorromeo\PathToRegex\Exception\PathException;
 use SeBorromeo\PathToRegex\Regex;
 
@@ -61,9 +62,16 @@ class PathToRegexTest extends TestCase {
 
         $this->assertCount(2, $tokens);
         $this->assertInstanceOf(Text::class, $tokens[0]);
-        $this->assertSame('/users/', $tokens[0]->value);
+
+        /** @var Text */
+        $text = $result->tokens[0];
+        $this->assertSame('/users/', $text->value);
+        
         $this->assertInstanceOf(Parameter::class, $tokens[1]);
-        $this->assertSame('id', $tokens[1]->name);
+
+         /** @var Parameter */
+        $param = $result->tokens[1];
+        $this->assertSame('id', $param->name);
     }
 
     public function testParseWildcard(): void {
@@ -74,9 +82,15 @@ class PathToRegexTest extends TestCase {
 
         $this->assertCount(2, $tokens);
         $this->assertInstanceOf(Text::class, $tokens[0]);
-        $this->assertSame('/files/', $tokens[0]->value);
-        $this->assertInstanceOf(Wildcard::class, $tokens[1]);
-        $this->assertSame('filepath', $tokens[1]->name);
+
+        /** @var Text */
+        $text = $result->tokens[0];
+        $this->assertSame('/files/', $text->value);
+
+        /** @var Wildcard */
+        $wildcard = $tokens[1];
+        $this->assertInstanceOf(Wildcard::class, $wildcard);
+        $this->assertSame('filepath', $wildcard->name);
     }
 
     public function testParseGroup(): void {
@@ -86,7 +100,10 @@ class PathToRegexTest extends TestCase {
         $tokens = $result->tokens;
         $this->assertCount(2, $tokens);
         $this->assertInstanceOf(Text::class, $tokens[0]);
-        $this->assertSame('/posts', $tokens[0]->value);
+
+        /** @var Text */
+        $text = $tokens[0];
+        $this->assertSame('/posts', $text->value);
         $this->assertInstanceOf(Group::class, $tokens[1]);
 
         /** @var Group */
@@ -137,9 +154,15 @@ class PathToRegexTest extends TestCase {
 
         $this->assertCount(2, $tokens);
         $this->assertInstanceOf(Text::class, $tokens[0]);
-        $this->assertSame('/users/', $tokens[0]->value);
+
+        /** @var Text */
+        $text = $tokens[0];
+        $this->assertSame('/users/', $text->value);
         $this->assertInstanceOf(Parameter::class, $tokens[1]);
-        $this->assertSame('{id}', $tokens[1]->name);
+        
+        /** @var Parameter */
+        $param = $tokens[1];
+        $this->assertSame('{id}', $param->name);
     }
 
     public function testParseUnterminatedQuote(): void {
