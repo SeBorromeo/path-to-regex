@@ -169,6 +169,168 @@ class PathToRegexTest extends TestCase {
         $this->expectException(PathException::class);
         PathToRegex::parse('/users/:"id');
     }
+    
+    /* ---------- Compile ---------- */
+
+
+    public function testCompileStaticPath(): void {
+        $fn = PathToRegex::compile('/users');
+
+        $this->assertSame('/users', $fn([]));
+    }
+
+    public function testCompileSimpleParameter(): void {
+        $fn = PathToRegex::compile('/user/:id');
+
+        $this->assertSame('/user/123', $fn(['id' => '123']));
+    }
+
+    public function testCompileMultipleParameters(): void {
+        $fn = PathToRegex::compile('/user/:id/post/:postId');
+
+        $this->assertSame('/user/1/post/99', $fn([
+            'id' => '1',
+            'postId' => '99'
+        ]));
+    }
+
+    public function testCompileMissingParameterThrows(): void {
+        $fn = PathToRegex::compile('/user/:id');
+
+        $this->expectException(\InvalidArgumentException::class);
+        $fn([]);
+    }
+
+    public function testCompileMissingOneOfMultipleParamsThrows(): void {
+        $fn = PathToRegex::compile('/user/:id/post/:postId');
+
+        $this->expectException(\InvalidArgumentException::class);
+        $fn(['id' => 1]);
+    }
+
+    public function testCompileDefaultEncoding(): void {
+        $fn = PathToRegex::compile('/user/:name');
+
+        $this->assertSame('/user/john%20doe', $fn([
+            'name' => 'john doe'
+        ]));
+    }
+
+    public function testCompileDisableEncoding(): void {
+        $fn = PathToRegex::compile('/user/:name', [
+            'encode' => false
+        ]);
+
+        $this->assertSame('/user/john doe', $fn([
+            'name' => 'john doe'
+        ]));
+    }
+
+    public function testCompileCustomEncoding(): void {
+        $fn = PathToRegex::compile('/user/:name', [
+            'encode' => fn($v) => strtoupper($v)
+        ]);
+
+        $this->assertSame('/user/JOHN', $fn([
+            'name' => 'john'
+        ]));
+    }
+
+    public function testCompileWildcardBasic(): void {
+        $fn = PathToRegex::compile('/files/*path');
+
+        $this->assertSame('/files/a%2Fb%2Fc', $fn([
+            'path' => ['a/b/c']
+        ]));
+    }
+
+    public function testCompileWildcardArrayInput(): void {
+        $fn = PathToRegex::compile('/files/*path');
+
+        $this->assertSame('/files/a/b/c', $fn([
+            'path' => ['a', 'b', 'c']
+        ]));
+    }
+
+    public function testCompileWildcardMissingThrows(): void {
+        $fn = PathToRegex::compile('/files/*path');
+
+        $this->expectException(\InvalidArgumentException::class);
+        $fn([]);
+    }
+
+    public function testCompileCustomDelimiter(): void {
+        $fn = PathToRegex::compile('/files/*path', [
+            'delimiter' => '.'
+        ]);
+
+        $this->assertSame('/files/a.b.c', $fn([
+            'path' => ['a', 'b', 'c']
+        ]));
+    }
+
+    public function testCompileOptionalGroupIncluded(): void {
+        $fn = PathToRegex::compile('/user{/:id}');
+
+        $this->assertSame('/user/123', $fn([
+            'id' => '123'
+        ]));
+    }
+
+    public function testCompileOptionalGroupExcluded(): void {
+        $fn = PathToRegex::compile('/user{/ :id}');
+
+        $this->assertSame('/user', $fn([]));
+    }
+
+    public function testCompileNestedGroup(): void {
+        $fn = PathToRegex::compile('/a{/b{/c/:id}}');
+
+        $this->assertSame('/a/b/c/1', $fn(['id' => '1']));
+        $this->assertSame('/a/b', $fn([]));
+    }
+
+    public function testCompileEmptyStringParam(): void {
+        $fn = PathToRegex::compile('/user/:id');
+
+        $this->assertSame('/user/', $fn(['id' => '']));
+    }
+
+    public function testCompileZeroParam(): void {
+        $fn = PathToRegex::compile('/user/:id');
+
+        $this->assertSame('/user/0', $fn(['id' => '0']));
+    }
+
+    public function testCompileNullParamThrows(): void {
+        $fn = PathToRegex::compile('/user/:id');
+
+        $this->expectException(\InvalidArgumentException::class);
+        $fn(['id' => null]);
+    }
+
+    public function testCompileNonScalarParamThrows(): void {
+        $fn = PathToRegex::compile('/user/:id');
+
+        $this->expectException(\InvalidArgumentException::class);
+        $fn(['id' => new stdClass()]);
+    }
+
+    public function testCompileWildcardNonArrayNonStringThrows(): void {
+        $fn = PathToRegex::compile('/files/*path');
+
+        $this->expectException(\InvalidArgumentException::class);
+        $fn(['path' => new stdClass()]);
+    }
+
+    public function testCompileComplexPath(): void {
+        $fn = PathToRegex::compile('/user/:id/files/*path');
+
+        $this->assertSame('/user/1/files/a/b', $fn([
+            'id' => '1',
+            'path' => ['a', 'b']
+        ]));
+    }
 
     /* ---------- Match ---------- */
 

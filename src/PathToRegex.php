@@ -8,6 +8,7 @@ use SeBorromeo\PathToRegex\AST\Text;
 use SeBorromeo\PathToRegex\AST\Token;
 use SeBorromeo\PathToRegex\AST\Wildcard;
 use SeBorromeo\PathToRegex\AST\TokenData;
+use SeBorromeo\PathToRegex\AST\FlatToken;
 use SeBorromeo\PathToRegex\Lexer\LexToken;
 use SeBorromeo\PathToRegex\Lexer\TokenType;
 
@@ -162,17 +163,148 @@ class PathToRegex {
 
     /* ---------- Compile ---------- */
 
-    // public function compile(Path $path, array $options = []): callable {
-    //     return function() {};
-    // }
+    /**
+     * Compile a string to a template function for the path.
+     * 
+     * @param TokenData|string $path
+     *  - The path to compile. Can be a string or a TokenData object containing the tokens and original path string.
+     * 
+     * @param array{
+     *   encode?: callable(string): string, 
+     *   delimiter?: string
+     * } $options
+     *  - Optional settings for the compilation:
+     *    - encode: A function to encode path segments (default: rawurlencode).
+     *    - delimiter: The delimiter to use for matching path segments (default: DEFAULT_DELIMITER).
+     * 
+     * @return callable(array): string
+     * 
+     * @throws \InvalidArgumentException
+     *  - Thrown if a required parameter is missing when the generated function is called, or if a parameter value is of an invalid type.
+     */
+    public static function compile(TokenData|string $path, array $options = []): callable {
+        $data = $path instanceof TokenData ? $path : self::parse($path, $options);
+        $fn = self::tokensToFunction($data->tokens, $options['delimiter'] ?? DEFAULT_DELIMITER, $options['encode'] ?? rawurlencode(...));
 
-    private function tokensToFunction(array $tokens, string $delimiter, callable|false $encode): callable {
-        return function() {}; // TODO
+        return function($params = []) use ($fn) {
+            $missing = [];
+            $path = $fn($params, $missing);
+            
+            if (count($missing) > 0) {
+                $names = implode(', ', $missing);
+                throw new \InvalidArgumentException("Missing parameters: $names");
+            }
+            
+            return $path;
+        };
     }
 
-    private function tokenToFunction(Token $token, string $delimiter, callable|false $encode): callable {
-        return function() {}; // TODO
+    /**
+     * Transform an array of tokens into a template function that generates a path string from parameter values.
+     * 
+     * @param Token[] $tokens
+     * 
+     * @param string $delimiter
+     * 
+     * @param callable|false $encode
+     *  - A function to encode parameter values, or false to disable encoding (default: encodeURIComponent).
+     */
+    private static function tokensToFunction(array $tokens, string $delimiter, callable|false $encode): callable {
+        $encoders = array_map(function(Token $token) use ($delimiter, $encode) { 
+            return self::tokenToFunction($token, $delimiter, $encode);
+        }, $tokens);
 
+        return function(array $data, array &$missing) use ($encoders) {
+            $result = '';
+
+            foreach ($encoders as $encoder) {
+                $result .= $encoder($data, $missing);
+            }
+
+            return $result;
+
+        };
+    }
+
+    /**
+     * Transform a single token into a function that generates the corresponding part of the path string from parameter values.
+     * 
+     * @param Token $token
+     * 
+     * @param string $delimiter
+     * 
+     * @param callable|false $encode
+     *  - A function to encode parameter values, or false to disable encoding.
+     * 
+     * @throws \InvalidArgumentException
+     *  - Thrown if a required parameter is missing when the generated function is called,
+     */
+    private static function tokenToFunction(Token $token, string $delimiter, callable|false $encode): callable {
+        if ($token instanceof Text)
+            return fn() => $token->value;
+        
+        if ($token instanceof Group) {
+            $fn = self::tokensToFunction($token->tokens, $delimiter, $encode);
+
+            return function(array $data, array &$missing) use ($fn) {
+                $len = count($missing);
+                $value = $fn($data, $missing);
+                if (count($missing) === $len) return $value;
+
+                $missing = array_slice($missing, 0, $len); // Reset optional group.
+                return '';
+            };
+        }
+
+        $encodeValue = $encode === false ? noop(...) : $encode;
+
+        if ($token instanceof Wildcard && $encode !== false) {
+            return function(array $data, array &$missing) use ($token, $delimiter, $encodeValue) {
+                $value = $data[$token->name];
+                if ($value === null) {
+                    $missing[] = $token->name;
+                    return '';
+                } 
+
+                if (!is_array($value) || count($value) === 0) {
+                    throw new \InvalidArgumentException("Expected parameter '$token->name' to be a non-empty array");
+                }
+
+                $result = '';
+
+                foreach ($value as $i => $v) {
+                    if (!is_string($v)) {
+                        throw new \InvalidArgumentException("Expected parameter '$token->name'/{$i} to be a string");
+                    }
+
+                    if ($i > 0) { 
+                        $result .= $delimiter;
+                    }
+
+                    $result .= $encodeValue($v);
+                }
+
+                return $result; 
+            };
+        } 
+        
+        if ($token instanceof Key) {
+            return function(array $data, array &$missing) use ($token, $encodeValue) {
+                if (!isset($data[$token->name])) {
+                    $missing[] = $token->name;
+                    return '';
+                }
+
+                $value = $data[$token->name];
+                if (!is_string($value)) {
+                    throw new \InvalidArgumentException("Expected parameter '$token->name' to be a string");
+                }
+
+                return $encodeValue($value);
+            };
+        }
+        
+        throw new \InvalidArgumentException("Unsupported token type " . $token->type());
     }
 
     /* ---------- Match ---------- */
@@ -432,8 +564,11 @@ class PathToRegex {
      * 
      * @param int $index
      * - The index of the first token to stringify.
-      * 
-      * @return string
+     * 
+     * @throws \InvalidArgumentException
+     * - If an unsupported token type is encountered during stringification. 
+     * 
+     * @return string
      */
     private static function stringifyTokens(array $tokens, int $index = 0): string {
         $value = '';
@@ -475,8 +610,6 @@ class PathToRegex {
      * 
      * @param Token|null $next
      *  - The next token in the sequence, used to determine if the name needs to be escaped to avoid ambiguity when followed by certain text tokens.
-     * 
-     * @return string
      */
     private static function stringifyName(string $name, ?Token $next = null): string {
         if (!self::isNameSafe($name) || self::isNextNameSafe($next)) {
@@ -488,6 +621,9 @@ class PathToRegex {
 
     /**
      * Escape text for stringify to path.
+     * 
+     * @param string $str
+     * - The text to escape.
      */
     private static function escapeText(string $str): string {
         return preg_replace('/[{}()\[\]+?!:*\\\\]/', '\\\\$0', $str);
@@ -495,6 +631,9 @@ class PathToRegex {
 
     /**
      * Check if a parameter name is safe to stringify without quotes.
+     * 
+     * @param string $name
+     * - The parameter name to check.
      */
     private static function isNameSafe(string $name): bool {
         return preg_match(ID, $name) === 1;
@@ -502,6 +641,10 @@ class PathToRegex {
 
     /**
      * Check if the next token is a text token that starts with a character that can be used in an unquoted parameter name.
+     * 
+     * @param Token|null $token
+     *  - The next token to check (or null if there is no next token).
+     * 
      */
     private static function isNextNameSafe(?Token $token = null): bool {
         return $token !== null
