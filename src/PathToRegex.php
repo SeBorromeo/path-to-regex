@@ -399,10 +399,15 @@ class PathToRegex {
         $keys = [];
         $flags = $sensitive ? '' : 'i';
         $sources = [];
+        $combinations = 0;
 
         foreach (self::pathsToArray($path, []) as $input) {
             $data = $input instanceof TokenData ? $input : self::parse($input, $options);
             foreach (self::flatten($data->tokens) as $tokens) {
+                if ($combinations++ > 256) {
+                    throw new PathException("Too many path combinations.", $data->originalPath);
+                }
+                
                 $sources[] = self::toRegexSource($tokens, $delimiter, $keys, $data->originalPath);
             }
         }
