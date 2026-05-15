@@ -260,7 +260,7 @@ class PathToRegex {
 
         if ($token instanceof Wildcard && $encode !== false) {
             return function(array $data, array &$missing) use ($token, $delimiter, $encodeValue) {
-                $value = $data[$token->name];
+                $value = $data[$token->name] ?? null;
                 if ($value === null) {
                     $missing[] = $token->name;
                     return '';
@@ -586,9 +586,11 @@ class PathToRegex {
             } elseif ($token instanceof Group) {
                 $value .= '{' . self::stringifyTokens($token->tokens, 0) . '}';
             } elseif ($token instanceof Parameter) {
-                $value .= ':' . self::stringifyName($token->name, $tokens[$index]);
+                $nextToken = $tokens[$index] ?? null;
+                $value .= ':' . self::stringifyName($token->name, $nextToken);
             } elseif ($token instanceof Wildcard) {
-                $value .= '*' . self::stringifyName($token->name, $tokens[$index]);
+                $nextToken = $tokens[$index] ?? null;
+                $value .= '*' . self::stringifyName($token->name, $nextToken);
             } else {
                 throw new \InvalidArgumentException("Unsupported token type " . $token->type());
             }
