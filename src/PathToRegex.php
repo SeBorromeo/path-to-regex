@@ -13,7 +13,7 @@ use SeBorromeo\PathToRegex\Lexer\LexToken;
 use SeBorromeo\PathToRegex\Lexer\TokenType;
 
 const DEFAULT_DELIMITER = '/';
-function noop($v) { return $v; }
+function noop(mixed $v) { return $v; }
 const ID_START = '/^[$_\p{L}\p{Nl}]$/u';
 const ID_CONTINUE = '/^[$\p{L}\p{Nl}\p{Mn}\p{Mc}\p{Nd}\p{Pc}\x{200C}\x{200D}]$/u';
 const ID = '/^[$_\p{L}\p{Nl}][$_\p{L}\p{Nl}\p{Mn}\p{Mc}\p{Nd}\p{Pc}\x{200C}\x{200D}]*$/u';
