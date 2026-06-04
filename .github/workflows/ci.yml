@@ -22,5 +22,8 @@ jobs:
       - name: Install Composer dependencies
         run: composer install --prefer-dist --no-progress --no-interaction
 
+      - name: Run single test
+        run: ./vendor/bin/phpunit --filter testParseEmpty
+
       - name: Run PHPUnit
         run: ./vendor/bin/phpunit --colors=always
