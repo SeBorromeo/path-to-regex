@@ -49,7 +49,7 @@ class PathToRegex {
      */
     public static function parse(string $string, array $options = []): TokenData {
         $encodePath = $options['encodePath'] ?? noop(...);
-        $chars = str_split($string);
+        $chars = ($string === '') ? [] : str_split($string);
         $tokens = [];
         $index = 0;
         $pos = 0;
